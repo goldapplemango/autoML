@@ -252,8 +252,9 @@ def main():
         save_last_data_size(len(data))  # 초기 데이터 크기 저
 
     train_and_evaluate(data, data_path)
+  
     # 추천 번호 제공
-    provide_recommendations(current_model, X)
+    provide_recommendations(meta_model, X, top_n=5)
     print("프로그램을 종료합니다.")
 
 # end main
@@ -264,7 +265,7 @@ from sklearn.metrics import accuracy_score
 from feature_utils6 import generate_features
 from model_utils6 import load_model, save_model, train_individual_models, train_meta_model, feature_engineering
 from recommendations import provide_recommendations
-from tuning_conditional import conditional_tuning, period_tuning
+from tuning_conditional import period_tuning. #conditional_tuning
 
 def train_and_evaluate(data, paths):
     """학습 루프 및 모델 평가"""
@@ -345,3 +346,5 @@ def train_and_evaluate(data, paths):
             log_file.write(f"Time: {time.time()}, Accuracy: {eval_accuracy:.4f}\n")
 
     return best_eval_accuracy
+
+# end main
