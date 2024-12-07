@@ -137,22 +137,22 @@ def load_tuning_history():
     else:
         return []  # 이력이 없으면 빈 리스트 반환
 
-def load_initial_data_size():
+def load_last_data_size():
     """
     저장된 초기 데이터 크기를 불러오는 함수.
     """
-    if os.path.exists(initial_data_size_file):
-        with open(initial_data_size_file, "r") as file:
+    if os.path.exists(last_data_size_file):
+        with open(last_data_size_file, "r") as file:
             data_size = json.load(file)
         return data_size
     else:
         return None  # 초기 데이터 크기가 없으면 None 반환
 
-def save_initial_data_size(data_size):
+def save_last_data_size(data_size):
     """
     초기 데이터 크기를 저장하는 함수.
     """
-    with open(initial_data_size_file, "w") as file:
+    with open(last_data_size_file, "w") as file:
         json.dump(data_size, file, indent=4)
 
 def save_tuning_history(epoch, accuracy, best_params, model_path):
@@ -247,52 +247,100 @@ def main():
         return
 
     # 초기 데이터 크기 저장 (첫 실행 시)
-    initial_data_size = load_initial_data_size()
-    if not initial_data_size:
-        save_initial_data_size(len(data))  # 초기 데이터 크기 저장
+    last_data_size = load_last_data_size()
+    if not last_data_size:
+        save_last_data_size(len(data))  # 초기 데이터 크기 저
 
-    # 데이터 분할
-    X = data.drop(columns=['보너스']).values
-    y = data['보너스'].values
-
-    # 모델 로드 또는 학습
-    individual_models = load_model(individual_model_path_gb, act_path)
-    meta_model = load_model(meta_model_path, act_path)
-
-    if individual_models is None or meta_model is None:
-        print("기존 모델이 없어 새로 학습을 시작합니다...")
-        individual_models = train_individual_models(X, y)
-        meta_model = train_meta_model(individual_models, X, y)
-        save_model(individual_models, individual_model_path_rf, act_path)
-        save_model(meta_model, meta_model_path, act_path)
-
-    # 학습 루프 시작
-    best_eval_accuracy = 0
-
-    for epoch in range(1, 1001):
-        print(f"\n{epoch}회 학습 시작...")
-
-        # 모델 학습 후 정확도 계산
-        current_model, train_accuracy = train_individual_models(X, y)  # 모델 학습
-        eval_accuracy = evaluate_model(current_model, X, y)  # 모델 평가
-
-        # 최고 평가 정확도 갱신
-        if eval_accuracy > best_eval_accuracy:
-            best_eval_accuracy = eval_accuracy  # 최고 성능 갱신
-            save_model(current_model, f"{act_path}/best_model.pkl", act_path)  # 모델 저장
-
-        # 조건부 하이퍼파라미터 튜닝
-        best_params, last_tuning_time = conditional_tuning(eval_accuracy, best_eval_accuracy, X, y)
-
-        if best_params:
-            current_model.set_params(**best_params)
-            current_model.fit(X, y)
-            print("튜닝 후 모델 재학습 완료.")
-
-        log_progress(epoch, best_eval_accuracy)
-        time.sleep(5)  # 학습 간격 설정
-
+    train_and_evaluate(data, data_path)
     # 추천 번호 제공
     provide_recommendations(current_model, X)
     print("프로그램을 종료합니다.")
 
+# end main
+
+import os
+import time
+from sklearn.metrics import accuracy_score
+from model_utils6 import load_model, save_model, train_individual_models, train_meta_model, feature_engineering
+from recommendations import provide_recommendations
+from tuning_conditional import conditional_tuning, period_tuning
+
+def train_and_evaluate(data, paths):
+    """학습 루프 및 모델 평가"""
+    X = data.drop(columns=['보너스']).values
+    y = data['보너스'].values
+
+    # 모델 로드 또는 초기화
+    rf_model = load_model(paths["model_rf_path"])
+    meta_model = load_model(paths["model_meta_path"])
+
+    if rf_model is None or meta_model is None:
+        print("기존 모델이 없어 새로 학습을 시작합니다...")
+        rf_model = train_individual_models(X, y)
+        meta_model = train_meta_model([rf_model], X, y)
+        save_model(rf_model, paths["model_rf_path"])
+        save_model(meta_model, paths["model_meta_path"])
+
+    # 학습 루프 초기화
+    best_eval_accuracy = 0
+    no_improvement_count = 0
+    max_no_improvement_epochs = 5
+    performance_log = []
+
+    while True:
+        print("\n[학습 루프 시작]")
+        # 1. 피처 엔지니어링
+        X = feature_engineering(X)
+
+        # 2. 모델 평가
+        eval_accuracy = evaluate_model([rf_model], X, y)
+        print(f"현재 평가 정확도: {eval_accuracy:.4f}, 최고 평가 정확도: {best_eval_accuracy:.4f}")
+
+        # 성능 향상 여부 확인
+        if eval_accuracy > best_eval_accuracy:
+            best_eval_accuracy = eval_accuracy
+            save_model(meta_model, paths["best_model_path"])
+            print(f"최고 성능 갱신! (정확도: {best_eval_accuracy:.4f})")
+            provide_recommendations(meta_model, X)
+            no_improvement_count = 0  # 개선되었으므로 카운트 초기화
+        else:
+            no_improvement_count += 1
+
+        # 2-1. 최적의 하이퍼파라미터 튜닝
+        best_params, improvement = conditional_tuning(eval_accuracy, best_eval_accuracy, X, y)
+        if improvement:
+            print("하이퍼파라미터가 업데이트되었습니다.")
+            rf_model.set_params(**best_params)
+            rf_model.fit(X, y)
+            meta_model = train_meta_model([rf_model], X, y)
+            save_model(meta_model, paths["model_meta_path"])
+        elif no_improvement_count >= max_no_improvement_epochs:
+            # 2-2. 기간 기반 튜닝
+            print("성능 개선이 일정 시간 동안 이루어지지 않아 기간 기반 튜닝을 실행합니다.")
+            best_params = period_tuning(rf_model, meta_model, X, y)
+            rf_model.set_params(**best_params)
+            rf_model.fit(X, y)
+            meta_model = train_meta_model([rf_model], X, y)
+            save_model(meta_model, paths["model_meta_path"])
+
+        # 3. 일정 성능 향상 시 결과 저장
+        if best_eval_accuracy >= 0.95:
+            print("목표 성능에 도달하였습니다. 5세트의 추천을 저장합니다.")
+            recommendations = provide_recommendations(meta_model, X, top_n=5)
+            with open(os.path.join(paths["output_path"], "recommendations.txt"), "w") as f:
+                for rec in recommendations:
+                    f.write(f"{rec}\n")
+
+        # 4. 사용자 입력 처리
+        user_input = input("예측 결과를 5~10세트 출력할까요? 학습을 계속 진행할까요? (y/Enter: 계속, n: 종료): ")
+        if user_input.lower() == "n":
+            print("학습을 종료합니다.")
+            break
+
+        performance_log.append((time.time(), eval_accuracy))
+
+        # 5. 중단 시점 저장
+        with open(os.path.join(paths["output_path"], "training_progress.log"), "a") as log_file:
+            log_file.write(f"Time: {time.time()}, Accuracy: {eval_accuracy:.4f}\n")
+
+    return best_eval_accuracy
