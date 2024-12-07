@@ -1,20 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[2]:
-
-
-get_ipython().system('jupyter nbconvert --to python /content/drive/MyDrive/lotto6/utils6.ipynb')
-get_ipython().system('jupyter nbconvert --to python /content/drive/MyDrive/lotto6/ia-main6.ipynb')
-get_ipython().system('jupyter nbconvert --to python /content/drive/MyDrive/lotto6/feature_utils6.ipynb')
-get_ipython().system('jupyter nbconvert --to python /content/drive/MyDrive/lotto6/model_utils6.ipynb')
-get_ipython().system('jupyter nbconvert --to python /content/drive/MyDrive/lotto6/recommendations.ipynb')
-get_ipython().system('jupyter nbconvert --to python /content/drive/MyDrive/lotto6/tuning_conditional.ipynb')
-
-
-#
-
-
 # In[ ]:
 
 
