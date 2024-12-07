@@ -261,6 +261,7 @@ def main():
 import os
 import time
 from sklearn.metrics import accuracy_score
+from feature_utils6 import generate_features
 from model_utils6 import load_model, save_model, train_individual_models, train_meta_model, feature_engineering
 from recommendations import provide_recommendations
 from tuning_conditional import conditional_tuning, period_tuning
