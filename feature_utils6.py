@@ -1,14 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
 
 #feature_utils4.py
 
@@ -82,7 +71,37 @@ def dynamic_feature_selection(X, y, threshold='median'):
 # final_model = RandomForestClassifier(n_estimators=100, random_state=42)
 # final_model.fit(X_selected, y)
 
+def generate_features10(df):
+#    df = pd.DataFrame()
 
+    print("feature 데이터 크기 출력 ; ", df.shape)  # 데이터 크기 출력
+    print("데이터 컬럼 출력 : ", df.columns)  # 데이터 컬럼 출력
+#    print(df.head())
+    
+    print("COLUMN_NAMES 확인:", COLUMN_NAMES)
+    print("statistics 이전 : ", df[COLUMN_NAMES].head())  # 컬럼 데이터 확인
+
+    # 통계적 특징
+    statistics = calculate_statistics(df)
+    # 홀수/짝수 개수
+    parity = calculate_parity(df)
+    # 연속번호 여부
+    consecutive = calculate_consecutive(df)
+    # 번호 간 간격
+    gaps = calculate_gaps(df)
+    # 구간별 번호 분포
+    range_distribution = calculate_range_distribution(df, RANGES)
+    # 핫 넘버 분석
+    hot_cold = calculate_hot_cold_numbers(df)
+    # 회차 기반 특징
+    sequence_features = add_sequence_features(df)
+    # 번호 등장 빈도
+    frequency_features = calculate_frequency_of_appearance(df)
+    # 모든 feature 통합
+    features = pd.concat([statistics, parity, consecutive, gaps, range_distribution, hot_cold, sequence_features, frequency_features], axis=1)
+    # 최종 데이터에 병합
+    result = pd.concat([df, features], axis=1)
+    return result
 
 # 통계적 특징 계산
 def calculate_statistics(df):
@@ -169,7 +188,7 @@ def calculate_frequency_of_appearance(df):
 
 
 # 최종 특징 생성 함수
-def generate_features10(df):
+def generate_feature10(df):
     print("generate_features 시작")
 
     # 통계적 특징 생성
@@ -228,39 +247,6 @@ def generate_features10(df):
     except Exception as e:
         print(f"최종 병합 오류: {e}")
         return None
-
-def generate_features(df):
-#    df = pd.DataFrame()
-
-    print("feature 데이터 크기 출력 ; ", df.shape)  # 데이터 크기 출력
-    print("데이터 컬럼 출력 : ", df.columns)  # 데이터 컬럼 출력
-#    print(df.head())
-
-
-    print("COLUMN_NAMES 확인:", COLUMN_NAMES)
-    print("statistics 이전 : ", df[COLUMN_NAMES].head())  # 컬럼 데이터 확인
-
-    # 통계적 특징
-    statistics = calculate_statistics(df)
-    # 홀수/짝수 개수
-    parity = calculate_parity(df)
-    # 연속번호 여부
-    consecutive = calculate_consecutive(df)
-    # 번호 간 간격
-    gaps = calculate_gaps(df)
-    # 구간별 번호 분포
-    range_distribution = calculate_range_distribution(df, RANGES)
-    # 핫 넘버 분석
-    hot_cold = calculate_hot_cold_numbers(df)
-    # 회차 기반 특징
-    sequence_features = add_sequence_features(df)
-    # 번호 등장 빈도
-    frequency_features = calculate_frequency_of_appearance(df)
-    # 모든 feature 통합
-    features = pd.concat([statistics, parity, consecutive, gaps, range_distribution, hot_cold, sequence_features, frequency_features], axis=1)
-    # 최종 데이터에 병합
-    result = pd.concat([df, features], axis=1)
-    return result
 
 
 #    feature_utils.py  $#$$
