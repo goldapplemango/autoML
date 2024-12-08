@@ -91,27 +91,24 @@ def load_model(filename, act_path, version=None):
         print(f"모델 파일이 없습니다: {model_path}")
         return None
 
-def optimize_hyperparameters(X_train, y_train):
-    """Optuna를 사용한 하이퍼파라미터 튜닝"""
+# 하이퍼파라미터 최적화 함수 개선
+def optimize_hyperparameters(X_train, y_train, model_class, param_space, n_trials=50):
+    """동적 모델 및 하이퍼파라미터 최적화 지원"""
     def objective(trial):
-        n_estimators = trial.suggest_int('n_estimators', 50, 200)
-        max_depth = trial.suggest_int('max_depth', 3, 15)
-        min_samples_split = trial.suggest_int('min_samples_split', 2, 10)
-
-        model = RandomForestRegressor(n_estimators=n_estimators,
-                                      max_depth=max_depth,
-                                      min_samples_split=min_samples_split,
-                                      random_state=42)
+        params = {
+            key: trial.suggest_categorical(key, values) if isinstance(values, list) else
+            trial.suggest_float(key, values[0], values[1]) for key, values in param_space.items()
+        }
+        model = model_class(**params)
         model.fit(X_train, y_train)
-
         preds = model.predict(X_train)
-        mse = mean_squared_error(y_train, preds)
-        return mse
+        return mean_squared_error(y_train, preds)
 
     study = optuna.create_study(direction='minimize')
-    study.optimize(objective, n_trials=50)
+    study.optimize(objective, n_trials=n_trials)
     return study.best_params
 
+# evamuate
 def evaluate_model(models, X, y):
     """모델 성능 평가 (RMSE 및 R²)"""
     predictions = sum([model.predict(X) for model in models]) / len(models)
@@ -187,13 +184,73 @@ def get_latest_version(act_path, filename):
         return max(existing_versions)  # 가장 큰 버전 반환
     return None  # 해당 파일이 없으면 None 반환
 
-def update_version(current_version, performance_improved):
-    """성능 개선 시 버전 업데이트"""
-    major, minor, patch = map(int, current_version.split('.'))
-    if performance_improved:
-        minor += 1  # 성능 개선 시 minor 업데이트
-    else:
-        patch += 1  # 사소한 변경 시 patch 업데이트
+import datetime
 
-    new_version = f"{major}.{minor}.{patch}"
-    return new_version
+class TrainingInfo:
+    def __init__(self, model_changes="No changes", best_score=0.0, previous_best_score=0.0, hyperparameter_tuning=False, feature_changes=False):
+        self.model_changes = model_changes  # 모델 변경 사항
+        self.best_score = best_score  # 최고 성능
+        self.previous_best_score = previous_best_score  # 이전 최고 성능
+        self.hyperparameter_tuning = hyperparameter_tuning  # 하이퍼파라미터 튜닝 여부
+        self.feature_changes = feature_changes  # 특징 변경 여부
+
+
+def update_version(current_version, training_info):
+    """모델 변경 사항, 하이퍼파라미터 튜닝, 특징 변경에 따른 자동 버전 업데이트"""
+    major, minor, patch = map(int, current_version.split('.'))
+
+    # 모델 변경이 이루어졌을 때 (예: 모델 아키텍처 변경)
+    if training_info.model_changes != "No changes":
+        major += 1
+        minor = 0
+        patch = 0  # major 버전 증가 시 minor와 patch 초기화
+        print(f"Model changes detected, incrementing major version to {major}")
+
+    # 하이퍼파라미터 튜닝이 이루어진 경우 (예: 성능 향상 시)
+    elif training_info.hyperparameter_tuning:
+        minor += 1
+        patch = 0  # minor 버전 증가 시 patch 초기화
+        print(f"Hyperparameter tuning detected, incrementing minor version to {minor}")
+
+    # 특징 엔지니어링 또는 특징 변경이 있을 경우 (예: 데이터 또는 feature 변화)
+    elif training_info.feature_changes:
+        major += 1
+        minor = 0
+        patch = 0  # feature 변경 시 major 버전 증가
+        print(f"Feature changes detected, incrementing major version to {major}")
+
+    # 성능이 향상되었을 경우 patch 버전 증가
+    elif training_info.best_score > training_info.previous_best_score and training_info.best_score <= 0.9:
+        patch += 1
+        print(f"Performance improvement detected, incrementing patch version to {patch}")
+
+    return f"{major}.{minor}.{patch}"
+
+
+def save_model(model, act_path, base_filename, version, epoch, best_score, training_info):
+    """모델을 저장하면서 자동으로 버전 관리"""
+    # 버전 관리
+    version = update_version(version, training_info)
+    
+    # 모델 정보 기록
+    model_info = {
+        'version': version,
+        'epoch': epoch,
+        'best_score': best_score,
+        'date': str(datetime.datetime.now()),
+        'model_changes': training_info.model_changes,
+        'hyperparameter_tuning': training_info.hyperparameter_tuning,
+        'feature_changes': training_info.feature_changes
+    }
+
+    model_path = f"{act_path}/{base_filename}_v{version}.pkl"
+    
+    # 모델 및 정보 저장
+    try:
+        with open(model_path, 'wb') as f:
+            pickle.dump({'model': model, 'model_info': model_info}, f)
+        print(f"Model saved at {model_path} with version {version}")
+    except Exception as e:
+        print(f"Error saving model: {e}")
+
+# end 
