@@ -19,7 +19,7 @@ RANGES = {
 
 from sklearn.feature_selection import SelectFromModel
 
- detect_and_manage_features(model, X, y):
+def detect_and_manage_features(model, X, y):
     """피처 중요도를 평가하고, 중요도가 낮은 피처를 제거"""
     model.fit(X, y)  # 모델 학습 (중요도 평가를 위해)
 
@@ -90,7 +90,7 @@ def load_important_features(path):
         print("중요 피처 파일이 없습니다. 새로 생성합니다.")
         return None
 
-def generate_features10(df):
+def generate_features(df):
 #    df = pd.DataFrame()
 
     print("feature 데이터 크기 출력 ; ", df.shape)  # 데이터 크기 출력
@@ -204,69 +204,6 @@ def calculate_frequency_of_appearance(df):
     for number in range(1, 51):
         features[f'{number}_빈도'] = df[COLUMN_NAMES].apply(lambda row: row.tolist().count(number), axis=1)
     return features
-
-
-# 최종 특징 생성 함수
-def generate_feature10(df):
-    print("generate_features 시작")
-
-    # 통계적 특징 생성
-    try:
-        statistics = calculate_statistics(df)
-        print("통계적 특징 생성 완료")
-    except Exception as e:
-        print(f"calculate_statistics 오류: {e}")
-        return None
-
-    # 홀수/짝수 개수 계산
-    try:
-        parity = calculate_parity(df)
-        print("홀수/짝수 개수 생성 완료")
-    except Exception as e:
-        print(f"calculate_parity 오류: {e}")
-        return None
-
-    # 연속 번호 여부
-    try:
-        consecutive = calculate_consecutive(df)
-        print("연속 번호 여부 생성 완료")
-    except Exception as e:
-        print(f"calculate_consecutive 오류: {e}")
-        return None
-
-    # 번호 간 간격
-    try:
-        gaps = calculate_gaps(df)
-        print("번호 간 간격 생성 완료")
-    except Exception as e:
-        print(f"calculate_gaps 오류: {e}")
-        return None
-
-    # 구간별 번호 분포
-    try:
-        range_distribution = calculate_range_distribution(df, RANGES)
-        print("구간별 번호 분포 생성 완료")
-    except Exception as e:
-        print(f"calculate_range_distribution 오류: {e}")
-        return None
-
-    # 모든 feature 통합
-    try:
-        features = pd.concat([statistics, parity, consecutive, gaps, range_distribution], axis=1)
-        print("feature 통합 완료")
-    except Exception as e:
-        print(f"feature 통합 오류: {e}")
-        return None
-
-    # 최종 데이터에 병합
-    try:
-        result = pd.concat([df, features], axis=1)
-        print("최종 데이터 병합 완료")
-        return result
-    except Exception as e:
-        print(f"최종 병합 오류: {e}")
-        return None
-
 
 # end feature
 
