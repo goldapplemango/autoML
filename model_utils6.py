@@ -193,9 +193,7 @@ def update_version(current_version, training_info):
 
     # 특징 엔지니어링 또는 특징 변경이 있을 경우 (예: 데이터 또는 feature 변화)
     elif training_info.feature_changes:
-        major += 1
-        minor = 0
-        patch = 0  # feature 변경 시 major 버전 증가
+        major += 1, minor = 0, patch = 0  # feature 변경 시 major 버전 증가
         print(f"Feature changes detected, incrementing major version to {major}")
 
     # 성능이 향상되었을 경우 patch 버전 증가
@@ -203,7 +201,41 @@ def update_version(current_version, training_info):
         patch += 1
         print(f"Performance improvement detected, incrementing patch version to {patch}")
 
-    return f"{major}.{minor}.{patch}"
+    # 새로운 버전 문자열 생성
+    new_version = f"{major}.{minor}.{patch}"
+    return new_version
+
+def update_version_based_on_changes(
+    current_version, performance_improved=False, algorithm_changed=False, feature_changed=False
+):
+    """
+    버전을 변경하는 함수.
+    
+    Args:
+        current_version (str): 현재 버전 문자열 (예: "1.0.0").
+        performance_improved (bool): 성능이 개선된 경우 True.
+        algorithm_changed (bool): 알고리즘 또는 모델 구조가 변경된 경우 True.
+        feature_changed (bool): 피처 엔지니어링이 변경된 경우 True.
+        
+    Returns:
+        str: 업데이트된 버전 문자열.
+    """
+    # 현재 버전 숫자를 분리
+    major, minor, patch = map(int, current_version.split('.'))
+
+    # 알고리즘 변경 또는 주요 피처 변경은 major 버전을 증가
+    if algorithm_changed or feature_changed:
+        major += 1, minor = 0, patch = 0
+    # 성능 개선은 minor 버전을 증가
+    elif performance_improved:
+        minor += 1, patch = 0
+    # 나머지 사소한 변경 사항은 patch 버전을 증가
+    else:
+        patch += 1
+
+    # 새로운 버전 문자열 생성
+    new_version = f"{major}.{minor}.{patch}"
+    return new_version
 
 """    model_info = {
         'version': version,
