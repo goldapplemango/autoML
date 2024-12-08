@@ -71,6 +71,25 @@ def dynamic_feature_selection(X, y, threshold='median'):
 # final_model = RandomForestClassifier(n_estimators=100, random_state=42)
 # final_model.fit(X_selected, y)
 
+#    feature_utils.py  $#$$
+
+def save_important_features(features, path):
+    """중요 피처 저장"""
+    with open(path, 'w') as file:
+        json.dump(features, file)
+    print(f"중요 피처 저장 완료: {path}")
+
+def load_important_features(path):
+    """중요 피처 불러오기"""
+    if (path):
+        with open(path, 'r') as file:
+            features = json.load(file)
+        print(f"중요 피처 불러오기 완료: {path}")
+        return features
+    else:
+        print("중요 피처 파일이 없습니다. 새로 생성합니다.")
+        return None
+
 def generate_features10(df):
 #    df = pd.DataFrame()
 
@@ -246,26 +265,6 @@ def generate_feature10(df):
         return result
     except Exception as e:
         print(f"최종 병합 오류: {e}")
-        return None
-
-
-#    feature_utils.py  $#$$
-
-def save_important_features(features, path):
-    """중요 피처 저장"""
-    with open(path, 'w') as file:
-        json.dump(features, file)
-    print(f"중요 피처 저장 완료: {path}")
-
-def load_important_features(path):
-    """중요 피처 불러오기"""
-    if (path):
-        with open(path, 'r') as file:
-            features = json.load(file)
-        print(f"중요 피처 불러오기 완료: {path}")
-        return features
-    else:
-        print("중요 피처 파일이 없습니다. 새로 생성합니다.")
         return None
 
 
