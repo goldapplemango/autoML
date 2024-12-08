@@ -167,23 +167,6 @@ def get_next_version(act_path, filename):
         return max(existing_versions) + 1
     return 1  # 버전 1부터 시작
 
-def get_latest_version(act_path, filename):
-    """파일 디렉토리를 검색하여 가장 최신 버전을 반환"""
-    existing_versions = []
-    for file in os.listdir(act_path):
-        if file.startswith(filename):
-            # 버전 번호 추출 (예: trained_model_individual_rf_v1.pkl)
-            try:
-                base_name, version = file.split("_v")
-                if version.endswith(".pkl"):
-                    version_number = int(version.split(".")[0])
-                    existing_versions.append(version_number)
-            except Exception:
-                continue
-    if existing_versions:
-        return max(existing_versions)  # 가장 큰 버전 반환
-    return None  # 해당 파일이 없으면 None 반환
-
 import datetime
 
 class TrainingInfo:
@@ -238,41 +221,69 @@ def update_version(current_version, training_info):
         'date': str(datetime.datetime.now())
     } """
 
-def save_model(model, act_path, base_filename, version, epoch, best_score, training_info):
-    """모델을 저장하면서 자동으로 버전 관리"""
-    # 버전 관리
-    version = update_version(version, training_info)
-    
-    # 모델 정보 기록
+import os
+import re
+
+import datetime
+import pickle
+
+def get_latest_version(model_path):
+    """모델 디렉토리에서 최신 버전 및 타임스탬프의 모델을 찾는 함수"""
+    model_files = [f for f in os.listdir(model_path) if f.endswith(".pkl")]
+    if not model_files:
+        return None
+
+    # 파일명에서 버전과 타임스탬프 추출
+    pattern = r"_(v\d+\.\d+\.\d+)_(\d{8}T\d{6})\.pkl$"
+    versioned_files = [
+        (f, re.search(pattern, f).groups()) for f in model_files if re.search(pattern, f)
+    ]
+
+    if not versioned_files:
+        return None
+
+    # 버전과 타임스탬프를 기준으로 정렬 (최신 버전 및 타임스탬프 순)
+    versioned_files.sort(
+        key=lambda x: (
+            tuple(map(int, x[1][0][1:].split('.'))),  # 버전
+            x[1][1]  # 타임스탬프
+        ),
+        reverse=True
+    )
+
+    # 가장 최신 파일 반환
+    return versioned_files[0][0]
+
+def save_model(model, model_path, base_filename, version, epoch, best_score):
+    """모델과 관련 정보를 저장하는 함수"""
+    timestamp = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
     model_info = {
+        'model': model,
         'version': version,
         'epoch': epoch,
         'best_score': best_score,
-        'date': str(datetime.datetime.now()),
-        'model_changes': training_info.model_changes,
-        'hyperparameter_tuning': training_info.hyperparameter_tuning,
-        'feature_changes': training_info.feature_changes
+        'timestamp': timestamp,
+        'date': str(datetime.datetime.now())
     }
-
-    model_path = f"{act_path}/{base_filename}_v{version}.pkl"
+    filename = f"{base_filename}_v{version}_{timestamp}.pkl"
+    full_path = os.path.join(model_path, filename)
     
-    # 모델 및 정보 저장
+    os.makedirs(model_path, exist_ok=True)
+    
     try:
-        with open(model_path, 'wb') as f:
-            pickle.dump({'model': model, 'model_info': model_info}, f)
-        print(f"Model saved at {model_path} with version {version}")
+        with open(full_path, "wb") as f:
+            pickle.dump(model_info, f)
+        print(f"모델 저장 완료: {full_path}")
     except Exception as e:
-        print(f"Error saving model: {e}")
-
-import os
-import pickle
+        print(f"모델 저장 실패: {e}")
 
 def load_model(model_path):
-    """모델을 불러오는 함수, 최신 버전의 모델을 불러옴"""
+    """모델을 불러오는 함수, 최신 버전 및 타임스탬프의 모델을 로드"""
     latest_model_filename = get_latest_version(model_path)
     if latest_model_filename is None:
         print(f"모델 파일이 없습니다. {model_path}에 모델을 새로 학습시켜야 합니다.")
         return None, None
+
     try:
         with open(os.path.join(model_path, latest_model_filename), "rb") as f:
             model_info = pickle.load(f)
