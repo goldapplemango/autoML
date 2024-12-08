@@ -194,22 +194,18 @@ class TrainingInfo:
         self.hyperparameter_tuning = hyperparameter_tuning  # 하이퍼파라미터 튜닝 여부
         self.feature_changes = feature_changes  # 특징 변경 여부
 
-
 def update_version(current_version, training_info):
     """모델 변경 사항, 하이퍼파라미터 튜닝, 특징 변경에 따른 자동 버전 업데이트"""
     major, minor, patch = map(int, current_version.split('.'))
 
     # 모델 변경이 이루어졌을 때 (예: 모델 아키텍처 변경)
     if training_info.model_changes != "No changes":
-        major += 1
-        minor = 0
-        patch = 0  # major 버전 증가 시 minor와 patch 초기화
+        major += 1, minor = 0, patch = 0  # major 버전 증가 시 minor와 patch 초기화
         print(f"Model changes detected, incrementing major version to {major}")
 
     # 하이퍼파라미터 튜닝이 이루어진 경우 (예: 성능 향상 시)
     elif training_info.hyperparameter_tuning:
-        minor += 1
-        patch = 0  # minor 버전 증가 시 patch 초기화
+        minor += 1, patch = 0  # minor 버전 증가 시 patch 초기화
         print(f"Hyperparameter tuning detected, incrementing minor version to {minor}")
 
     # 특징 엔지니어링 또는 특징 변경이 있을 경우 (예: 데이터 또는 feature 변화)
@@ -226,6 +222,21 @@ def update_version(current_version, training_info):
 
     return f"{major}.{minor}.{patch}"
 
+"""    model_info = {
+        'version': version,
+        'epoch': training_info['epoch'],
+        'best_score': training_info['best_score'],
+        'training_loss': training_info['training_loss'],
+        'validation_loss': training_info['validation_loss'],
+        'validation_score': training_info['validation_score'],
+        'learning_rate': training_info['learning_rate'],
+        'batch_size': training_info['batch_size'],
+        'optimizer': training_info['optimizer'],
+        'input_data_info': training_info.get('input_data_info', "No info"),
+        'model_changes': training_info.get('model_changes', "No changes"),
+        'feature_changes': training_info.get('feature_changes', "No changes"),
+        'date': str(datetime.datetime.now())
+    } """
 
 def save_model(model, act_path, base_filename, version, epoch, best_score, training_info):
     """모델을 저장하면서 자동으로 버전 관리"""
@@ -252,5 +263,28 @@ def save_model(model, act_path, base_filename, version, epoch, best_score, train
         print(f"Model saved at {model_path} with version {version}")
     except Exception as e:
         print(f"Error saving model: {e}")
+
+import os
+import pickle
+
+def load_model(model_path):
+    """모델을 불러오는 함수, 최신 버전의 모델을 불러옴"""
+    latest_model_filename = get_latest_version(model_path)
+    if latest_model_filename is None:
+        print(f"모델 파일이 없습니다. {model_path}에 모델을 새로 학습시켜야 합니다.")
+        return None, None
+    try:
+        with open(os.path.join(model_path, latest_model_filename), "rb") as f:
+            model_info = pickle.load(f)
+        print(f"최신 모델을 로드했습니다: {latest_model_filename}")
+        return model_info['model'], model_info
+    except Exception as e:
+        print(f"모델 로딩 실패: {e}")
+        return None, None
+
+def get_current_version():
+    """현재 시스템의 요구 버전 정보를 반환"""
+    # 이 부분은 시스템 또는 설정에 맞는 버전 규칙을 반환해야 합니다.
+    return "1.0.0"  # 예시 버전
 
 # end 
