@@ -17,10 +17,41 @@ RANGES = {
     '41-50': range(41, 51),
 }
 
+def generate_features(df):
+#    df = pd.DataFrame()
+    print("feature 데이터 크기 출력 ; ", df.shape)  # 데이터 크기 출력
+    print("데이터 컬럼 출력 : ", df.columns)  # 데이터 컬럼 출력
+#    print(df.head())
+    print("COLUMN_NAMES 확인:", COLUMN_NAMES)
+    print("statistics 이전 : ", df[COLUMN_NAMES].head())  # 컬럼 데이터 확인
+
+    # 통계적 특징
+    statistics = calculate_statistics(df)
+    # 홀수/짝수 개수
+    parity = calculate_parity(df)
+    # 연속번호 여부
+    consecutive = calculate_consecutive(df)
+    # 번호 간 간격
+    gaps = calculate_gaps(df)
+    # 구간별 번호 분포
+    range_distribution = calculate_range_distribution(df, RANGES)
+    # 핫 넘버 분석
+    hot_cold = calculate_hot_cold_numbers(df)
+    # 회차 기반 특징
+    sequence_features = add_sequence_features(df)
+    # 번호 등장 빈도
+    frequency_features = calculate_frequency_of_appearance(df)
+    # 모든 feature 통합
+    features = pd.concat([statistics, parity, consecutive, gaps, range_distribution, hot_cold, sequence_features, frequency_features], axis=1)
+    # 최종 데이터에 병합
+    result = pd.concat([df, features], axis=1)
+    return result
+
 from sklearn.feature_selection import SelectFromModel
 
 def detect_and_manage_features(model, X, y):
     """피처 중요도를 평가하고, 중요도가 낮은 피처를 제거"""
+
     model.fit(X, y)  # 모델 학습 (중요도 평가를 위해)
 
     # 피처 중요도 추출
@@ -35,10 +66,10 @@ def detect_and_manage_features(model, X, y):
     selected_features = X.columns[selector.get_support()]
     print(f"선정된 피처들: {selected_features}")
 
-    return pd.DataFrame(X_reduced, columns=selected_features)
+    festures = pd.DataFrame(X_reduced, columns=selected_features)
+    return features
 
-
-def dynamic_feature_selection(X, y, threshold='median'):
+def dynamic_feature_selection(model, X, y, threshold='median'):
     """
     동적으로 Feature를 선정/제거하는 함수.
 
@@ -50,8 +81,7 @@ def dynamic_feature_selection(X, y, threshold='median'):
     Returns:
     - X_selected: 선정된 Feature 데이터셋
     - selected_features: 선택된 Feature 목록
-    """
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    """#    model = RandomForestClassifier(n_estimators=100, random_state=42)
     model.fit(X, y)
 
     # Feature 중요도에 따른 선택
@@ -62,7 +92,8 @@ def dynamic_feature_selection(X, y, threshold='median'):
     selected_features = X.columns[selector.get_support()]
     print(f"선정된 Feature: {selected_features.tolist()}")
 
-    return pd.DataFrame(X_selected, columns=selected_features)
+    features = pd.DataFrame(X_selected, columns=selected_features)
+    return features
 
 # Feature 선정/제거 실행
 #X_selected = dynamic_feature_selection(X, y)
