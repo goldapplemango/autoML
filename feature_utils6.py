@@ -18,7 +18,7 @@ RANGES = {
 }
 
 # ---- Code-5: 피처 엔지니어링 ----
-def dynamic_feature_engineering(X_train, X_test, importance_threshold=0.05):
+def dynamic_feature_engineering(model, X_train, X_test, importance_threshold=0.05):
     """
     피처 엔지니어링 및 중요도에 따라 피처 제거
     """
