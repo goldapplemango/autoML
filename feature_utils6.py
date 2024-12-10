@@ -17,6 +17,24 @@ RANGES = {
     '41-50': range(41, 51),
 }
 
+# ---- Code-5: 피처 엔지니어링 ----
+def dynamic_feature_engineering(X_train, X_test, importance_threshold=0.05):
+    """
+    피처 엔지니어링 및 중요도에 따라 피처 제거
+    """
+    # 모델을 사용하여 피처 중요도 평가
+    # model = RandomForestClassifier(random_state=42)
+    model.fit(X_train, y_train)
+    
+    # 중요도가 낮은 피처를 제거
+    importances = model.feature_importances_
+    important_features = [i for i, imp in enumerate(importances) if imp > importance_threshold]
+    
+    X_train = X_train[:, important_features]
+    X_test = X_test[:, important_features]
+    
+    return X_train, X_test
+
 def generate_features(df):
 #    df = pd.DataFrame()
     print("feature 데이터 크기 출력 ; ", df.shape)  # 데이터 크기 출력
@@ -120,38 +138,6 @@ def load_important_features(path):
     else:
         print("중요 피처 파일이 없습니다. 새로 생성합니다.")
         return None
-
-def generate_features(df):
-#    df = pd.DataFrame()
-
-    print("feature 데이터 크기 출력 ; ", df.shape)  # 데이터 크기 출력
-    print("데이터 컬럼 출력 : ", df.columns)  # 데이터 컬럼 출력
-#    print(df.head())
-    
-    print("COLUMN_NAMES 확인:", COLUMN_NAMES)
-    print("statistics 이전 : ", df[COLUMN_NAMES].head())  # 컬럼 데이터 확인
-
-    # 통계적 특징
-    statistics = calculate_statistics(df)
-    # 홀수/짝수 개수
-    parity = calculate_parity(df)
-    # 연속번호 여부
-    consecutive = calculate_consecutive(df)
-    # 번호 간 간격
-    gaps = calculate_gaps(df)
-    # 구간별 번호 분포
-    range_distribution = calculate_range_distribution(df, RANGES)
-    # 핫 넘버 분석
-    hot_cold = calculate_hot_cold_numbers(df)
-    # 회차 기반 특징
-    sequence_features = add_sequence_features(df)
-    # 번호 등장 빈도
-    frequency_features = calculate_frequency_of_appearance(df)
-    # 모든 feature 통합
-    features = pd.concat([statistics, parity, consecutive, gaps, range_distribution, hot_cold, sequence_features, frequency_features], axis=1)
-    # 최종 데이터에 병합
-    result = pd.concat([df, features], axis=1)
-    return result
 
 # 통계적 특징 계산
 def calculate_statistics(df):
