@@ -108,6 +108,29 @@ def optimize_hyperparameters(X_train, y_train, model_class, param_space, n_trial
     study.optimize(objective, n_trials=n_trials)
     return study.best_params
 
+from sklearn.model_selection import GridSearchCV
+
+def tune_model_hyperparameters(model, X_train, y_train):
+    """
+    모델의 하이퍼파라미터를 튜닝하는 함수.
+    GridSearchCV를 사용하여 튜닝합니다.
+    """
+    param_grid = {
+        'n_estimators': [50, 100, 200],
+        'max_depth': [10, 20, None],
+        'learning_rate': [0.01, 0.1, 0.2]  # XGBoost나 다른 모델에서 사용하는 파라미터들
+    }
+
+    grid_search = GridSearchCV(estimator=model, param_grid=param_grid, scoring='f1_weighted', cv=3)
+    grid_search.fit(X_train, y_train)
+
+    best_model = grid_search.best_estimator_
+
+    logging.info(f"Best hyperparameters for {type(model).__name__}: {grid_search.best_params_}")
+
+    return best_model
+
+
 # evamuate
 def evaluate_model(models, X, y):
     """모델 성능 평가 (RMSE 및 R²)"""
