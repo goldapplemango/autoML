@@ -34,10 +34,13 @@ def get_model_path(filename, act_path, version=None):
         version = get_next_version(act_path, filename)  # 자동 버전 관리
     return os.path.join(act_path, f"{filename}_v{version}.pkl")
 
-def train_individual_models(X_train, y_train):
+"""개별 모델 (RandomForest, GradientBoosting) 학습"""    
+individual_models =[RandomForestRegressor, GradientBoostingRegressor]
+
+def train_individual_models(individual_models, X_train, y_train):
     """개별 모델 (RandomForest, GradientBoosting) 학습"""
-    rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
-    gb_model = GradientBoostingRegressor(n_estimators=100, random_state=42)
+    rf_model = tune_model_hyperparameters(individual_models[0])
+    gb_model = tune_model_hyperparameters(individual_models[1])
 
     rf_model.fit(X_train, y_train)
     gb_model.fit(X_train, y_train)
